@@ -1,9 +1,9 @@
 package bangmaple.helper.repository;
 
+import static bangmaple.helper.RepositoryHelper.*;
 
 import bangmaple.helper.ConnectionManager;
-import bangmaple.helper.annotations.Column;
-import bangmaple.helper.annotations.Id;
+import bangmaple.helper.JdbcRepositoryParams;
 import bangmaple.helper.annotations.Table;
 import bangmaple.helper.paging.Page;
 import bangmaple.helper.paging.Pageable;
@@ -27,44 +27,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     private PreparedStatement prStm;
     private ResultSet rs;
 
-    public String getParametersString(Field[] fields) {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < fields.length; i++) {
-            if (i == fields.length - 1) {
-                result.append(fields[i].getName());
-                break;
-            }
-            result.append(fields[i].getName()).append(", ");
-        }
-        return result.toString();
-    }
-
-    public String getIdFieldNameFromFields(Field[] fields) {
-        for (int i = 0; i < fields.length; i++) {
-            if (Objects.nonNull(fields[i].getAnnotation(Id.class))) {
-                return fields[i].getName();
-            }
-        }
-        throw new IllegalArgumentException();
-    }
-
-    @SuppressWarnings("unchecked")
-    public Class<T> getEntityInstance() {
-        return (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-    }
-
-    public T parseFromTableDataToEntity(Field[] fields) throws SQLException, IllegalAccessException, InstantiationException {
-        Class<T> entity = getEntityInstance();
-        T t = entity.newInstance();
-        for (Field field : fields) {
-            String column = field.getAnnotation(Column.class).value();
-            field.setAccessible(true);
-            field.set(t, rs.getObject(column));
-        }
-        return t;
-    }
-
-    private void closeConnection() throws SQLException {
+    protected void closeConnection() throws SQLException {
         try {
             if (Objects.nonNull(rs)) {
                 rs.close();
@@ -80,7 +43,6 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
         }
     }
 
-
     @Override
     public T findById(ID id) throws SQLException {
         Class<T> entity = getEntityInstance();
@@ -88,16 +50,15 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
         conn = ConnectionManager.getConnection();
         try {
             if (Objects.nonNull(conn)) {
-                Field[] fields = entity.getDeclaredFields();
-                String tableName = entity.getAnnotation(Table.class).name();
-                String idFieldName = getIdFieldNameFromFields(fields);
-                String params = getParametersString(fields);
-                String query = String.format("SELECT %s FROM %s WHERE %s = ?", params, tableName, idFieldName);
-                prStm = conn.prepareStatement(query);
+                String queryString = "SELECT %s FROM %s WHERE %s = ?";
+                JdbcRepositoryParams<T> params
+                        = new JdbcRepositoryParams<>(entity, queryString);
+                System.out.println(params.getSqlQuery());
+                prStm = conn.prepareStatement(params.getSqlQuery());
                 prStm.setObject(1, id);
                 rs = prStm.executeQuery();
                 if (rs.next()) {
-                    t = parseFromTableDataToEntity(fields);
+                    t = parseFromTableDataToEntity(params.getFields(), rs, entity);
                 }
             }
         } catch (SQLException | IllegalAccessException | InstantiationException e) {
@@ -122,7 +83,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
                 prStm = conn.prepareStatement(query);
                 rs = prStm.executeQuery();
                 while (rs.next()) {
-                    list.add(parseFromTableDataToEntity(fields));
+                    list.add(parseFromTableDataToEntity(fields, rs, entity));
                 }
             }
         } catch (SQLException | IllegalAccessException | InstantiationException e) {
@@ -133,37 +94,16 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
         return list;
     }
 
-    private String getStringParamValuesFromEntity(T entity) throws IllegalAccessException {
-        StringBuilder result = new StringBuilder();
-        Field[] fields = entity.getClass().getDeclaredFields();
-        for (int i = 0; i < fields.length; i++) {
-            fields[i].setAccessible(true);
-            if (i == fields.length - 1) {
-                result.append("?");
-                break;
-            }
-            result.append("?").append(", ");
-        }
-        return result.toString();
-    }
-
     @Override
     public void insert(T entity) throws SQLException {
-        Class<T> clazz = getEntityInstance();
         conn = ConnectionManager.getConnection();
         try {
             if (Objects.nonNull(conn)) {
-                Field[] fields = clazz.getDeclaredFields();
-                String tableName = clazz.getAnnotation(Table.class).name();
-                String params = getParametersString(fields);
-                String paramValues = getStringParamValuesFromEntity(entity);
-                String query = String.format("INSERT INTO %s(%s) VALUES(%s)", tableName, params, paramValues);
-                System.out.println(query);
-                prStm = conn.prepareStatement(query);
-                for (int i = 0; i < fields.length; i++) {
-                    fields[i].setAccessible(true);
-                    prStm.setObject(i + 1, fields[i].get(entity));
-                }
+                String queryString = "INSERT INTO %s(%s) VALUES(%s)";
+                JdbcRepositoryParams<T> params = new JdbcRepositoryParams<>(getEntityInstance(), entity, queryString);
+                System.out.println(params.getSqlQuery());
+                prStm = conn.prepareStatement(params.getSqlQuery());
+                bindValueToSQLBindingParams(params.getFields(), entity, prStm);
                 if (prStm.executeUpdate() < 1) {
                     throw new SQLException("Invalid SQL");
                 }
@@ -234,4 +174,17 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     public Iterable<T> findAll(Sort sort) {
         return null;
     }
+
+                    /*Field[] fields = clazz.getDeclaredFields();
+                String tableName = clazz.getAnnotation(Table.class).name();
+                String params = RepositoryHelper.getParametersString(fields);
+                String paramValues = RepositoryHelper.getStringParamValuesFromEntity(entity);
+                String query = String.format("INSERT INTO %s(%s) VALUES(%s)", tableName, params, paramValues);*/
+
+    @SuppressWarnings("unchecked")
+    protected <T> Class<T> getEntityInstance() {
+        System.out.println(getClass().getGenericSuperclass().getTypeName());
+        return (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+    }
+
 }
