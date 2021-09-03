@@ -143,7 +143,6 @@ public interface RepositoryHelper {
         }
     }
 
-
     static <T> void addToBatchThenCommitProperly(List<T> list, JdbcRepositoryParams params, Connection conn, PreparedStatement prStm)
             throws SQLException, IllegalAccessException {
         int batchSizeCounter = 0;
@@ -158,5 +157,37 @@ public interface RepositoryHelper {
             }
         }
         commitBatchTransaction(conn, prStm);
+    }
+
+    static <T> Field getIdFieldFromEntityFields(Field[] fields) {
+        Field idField = null;
+        for (Field field : fields) {
+            field.setAccessible(true);
+            if (Objects.nonNull(field.getAnnotation(Id.class))) {
+                idField = field;
+            }
+        }
+        return idField;
+    }
+
+    static <T> String getUpdateQueryStringWithEntityFields(T entity, String originalQuery) throws IllegalAccessException {
+        StringBuilder queryString = new StringBuilder(originalQuery);
+        Field[] fields = entity.getClass().getDeclaredFields();
+        Field idField = getIdFieldFromEntityFields(fields);
+        for (int i = 0; i < fields.length; i++) {
+            if (i == fields.length - 1) {
+                if (Objects.nonNull(fields[i].get(entity))) {
+                    queryString.append(queryString.substring(0, queryString.lastIndexOf(SQL_QUERY_PARAMS_DELIMITER)));
+                    queryString.append(" WHERE ").append(idField.getName()).append(" = ?");
+                } else {
+                    queryString.append(fields[i].getName()).append(" = ? WHERE ").append(idField.getName()).append(" = ?");
+                }
+                break;
+            }
+            if (Objects.nonNull(fields[i].get(entity))) {
+                queryString.append(fields[i].getName()).append(" = ?, ");
+            }
+        }
+        return queryString.toString();
     }
 }

@@ -4,14 +4,11 @@ import static bangmaple.helper.RepositoryHelper.*;
 
 import bangmaple.helper.ConnectionManager;
 import bangmaple.helper.JdbcRepositoryParams;
-import bangmaple.helper.annotations.Id;
-import bangmaple.helper.annotations.Table;
 import bangmaple.helper.paging.Page;
 import bangmaple.helper.paging.Pageable;
 import bangmaple.helper.paging.Sort;
 import bangmaple.helper.query.SQLQueryType;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -41,6 +38,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     private static final String FIND_ALL_QUERY = "SELECT %s FROM %s";
     private static final String DELETE_BY_ID_QUERY = "DELETE FROM %s WHERE %s = ?";
     private static final String INSERT_ONE_QUERY = "INSERT INTO %s(%s) VALUES(%s)";
+    private static final String UPDATE_QUERY = "UPDATE %s SET ";
     private static final String DELETE_ALL_QUERY = "DELETE FROM %s";
     private static final String IS_EXISTED_QUERY = "SELECT COUNT(%s) FROM %s WHERE %s = ?";
     private static final String COUNT_QUERY = "SELECT COUNT(%s) FROM %s";
@@ -143,38 +141,16 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     public void update(T entity, ID id) {
         conn = ConnectionManager.getConnection();
         try {
-            conn.setCatalog(entity.getClass().getAnnotation(Table.class).catalog());
-            String queryString = "UPDATE %s SET ";
-            Field[] fields = entity.getClass().getDeclaredFields();
-            Field idField = null;
-            for (int i = 0; i < fields.length; i++) {
-                fields[i].setAccessible(true);
-                if (fields[i].getAnnotation(Id.class) != null) {
-                    idField = fields[i];
-                }
-                if (i == fields.length - 1) {
-                    if (fields[i].get(entity) == null) {
-                        queryString = queryString.substring(0, queryString.lastIndexOf(","));
-                        queryString += " WHERE " + idField.getName() + " = ?";
-                    } else {
-                        queryString += fields[i].getName() + " = ? WHERE " + idField.getName() + " = ?";
-                    }
-                    break;
-                }
-                if (fields[i].get(entity) != null) {
-                    queryString += fields[i].getName() + " = ?, ";
-                }
-            }
-            System.out.println(queryString);
             if (Objects.nonNull(conn)) {
-                JdbcRepositoryParams<T, ID> params
-                        = new JdbcRepositoryParams<>(entity, queryString, id, SQLQueryType.UPDATE);
-                System.out.println(params.getSqlQuery());
+                conn.setCatalog(getDatabaseNameFromEntity(entity));
+                String queryString = getUpdateQueryStringWithEntityFields(entity, UPDATE_QUERY);
+                JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, queryString, id, SQLQueryType.UPDATE);
+                if (DEBUG) {
+                    LOGGER.log(Level.INFO, params.getSqlQuery());
+                }
                 prStm = conn.prepareStatement(params.getSqlQuery());
                 bindValueToSQLBindingParams(entity, prStm, SQLQueryType.UPDATE);
-                if (prStm.executeUpdate() < 0) {
-                    throw new SQLException("Invalid SQL");
-                }
+                prStm.executeUpdate();
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
