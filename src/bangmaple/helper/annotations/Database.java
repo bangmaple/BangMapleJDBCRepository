@@ -8,4 +8,6 @@ import java.lang.annotation.*;
 @Documented
 public @interface Database {
     String name() default "";
+    String catalog() default "";
+    String schema() default "";
 }

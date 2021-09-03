@@ -5,29 +5,44 @@
  */
 package bangmaple.helper;
 
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
 /**
- *
  * @author bangmaple
  */
 public final class ConnectionManager {
 
+    private static final String JAVA_EE_ENVIRONMENT = "java:comp/env";
+    public static String DATASOURCE_NAME = "JDBCRepository";
+
+    private static DataSource getJNDIDataSource() throws NamingException {
+        Context ctx = new InitialContext();
+        Context envCtx = (Context) ctx.lookup(JAVA_EE_ENVIRONMENT);
+        return (DataSource) envCtx.lookup(DATASOURCE_NAME);
+    }
+
     public static Connection getConnection() {
         try {
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            String protocol = "jdbc:sqlserver";
-            String databaseName = "users_management";
-            String host = "localhost";
-            int port = 1433;
-            String username = "sa";
-            String password = "Nhatrang1";
-            String connectionString = String.format("%s://%s:%s;databaseName=%s", protocol, host, port, databaseName);
-            return DriverManager.getConnection(connectionString, username, password);
+            return getJNDIDataSource().getConnection();
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            try {
+                String protocol = "jdbc:sqlserver";
+                String databaseName = "users_management";
+                String host = "localhost";
+                int port = 1433;
+                String username = "sa";
+                String password = "Nhatrang1";
+                String connectionString = String.format("%s://%s:%s", protocol, host, port);
+                return DriverManager.getConnection(connectionString, username, password);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                return null;
+            }
         }
     }
 }

@@ -8,4 +8,7 @@ import java.lang.annotation.*;
 @Documented
 public @interface Column {
     String value() default "";
+    boolean nullable() default true;
+    long length() default Long.MAX_VALUE;
+    boolean unique() default false;
 }
