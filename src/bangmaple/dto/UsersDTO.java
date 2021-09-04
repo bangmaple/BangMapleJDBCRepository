@@ -5,15 +5,15 @@
  */
 package bangmaple.dto;
 
-import bangmaple.helper.annotations.Column;
-import bangmaple.helper.annotations.Id;
-import bangmaple.helper.annotations.Table;
+import bangmaple.jdbc.annotations.Column;
+import bangmaple.jdbc.annotations.Id;
+import bangmaple.jdbc.annotations.Table;
 
 /**
  *
  * @author bangmaple
  */
-@Table(name = "users")
+@Table(name = "users", catalog = "users_management", schema = "dbo")
 public class UsersDTO {
 
     @Id

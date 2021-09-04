@@ -1,6 +1,7 @@
-package bangmaple.helper;
+package bangmaple.jdbc.dao.base;
 
-import bangmaple.helper.repository.JdbcRepository;
+import bangmaple.jdbc.helper.StoreHelper;
+import bangmaple.jdbc.repository.JdbcRepository;
 
 import java.lang.reflect.InvocationTargetException;
 

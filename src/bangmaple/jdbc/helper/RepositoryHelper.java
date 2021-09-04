@@ -1,10 +1,11 @@
-package bangmaple.helper;
+package bangmaple.jdbc.helper;
 
-import bangmaple.helper.annotations.Column;
-import bangmaple.helper.annotations.Id;
-import bangmaple.helper.annotations.Table;
-import bangmaple.helper.query.SQLQueryType;
-import bangmaple.helper.repository.JdbcRepository;
+import bangmaple.jdbc.annotations.Column;
+import bangmaple.jdbc.annotations.Id;
+import bangmaple.jdbc.annotations.Table;
+import bangmaple.jdbc.query.SQLQueryType;
+import bangmaple.jdbc.repository.JdbcRepository;
+import bangmaple.jdbc.utils.JdbcRepositoryParams;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -159,7 +160,7 @@ public interface RepositoryHelper {
         commitBatchTransaction(conn, prStm);
     }
 
-    static <T> Field getIdFieldFromEntityFields(Field[] fields) {
+    static Field getIdFieldFromEntityFields(Field[] fields) {
         Field idField = null;
         for (Field field : fields) {
             field.setAccessible(true);
@@ -175,17 +176,13 @@ public interface RepositoryHelper {
         Field[] fields = entity.getClass().getDeclaredFields();
         Field idField = getIdFieldFromEntityFields(fields);
         for (int i = 0; i < fields.length; i++) {
-            if (i == fields.length - 1) {
-                if (Objects.nonNull(fields[i].get(entity))) {
-                    queryString.append(queryString.substring(0, queryString.lastIndexOf(SQL_QUERY_PARAMS_DELIMITER)));
-                    queryString.append(" WHERE ").append(idField.getName()).append(" = ?");
-                } else {
-                    queryString.append(fields[i].getName()).append(" = ? WHERE ").append(idField.getName()).append(" = ?");
-                }
-                break;
-            }
             if (Objects.nonNull(fields[i].get(entity))) {
-                queryString.append(fields[i].getName()).append(" = ?, ");
+                if (i == fields.length - 1) {
+                    queryString.append(fields[i].getName()).append(" = ?")
+                            .append(" WHERE ").append(idField.getName()).append(" = ?");
+                } else {
+                    queryString.append(fields[i].getName()).append(" = ?, ");
+                }
             }
         }
         return queryString.toString();

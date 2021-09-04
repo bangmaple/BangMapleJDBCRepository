@@ -1,4 +1,4 @@
-package bangmaple.helper.query;
+package bangmaple.jdbc.query;
 
 public enum SQLQueryType {
     CREATE("CREATE"),

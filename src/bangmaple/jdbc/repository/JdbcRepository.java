@@ -1,13 +1,13 @@
-package bangmaple.helper.repository;
+package bangmaple.jdbc.repository;
 
-import static bangmaple.helper.RepositoryHelper.*;
+import static bangmaple.jdbc.helper.RepositoryHelper.*;
 
-import bangmaple.helper.ConnectionManager;
-import bangmaple.helper.JdbcRepositoryParams;
-import bangmaple.helper.paging.Page;
-import bangmaple.helper.paging.Pageable;
-import bangmaple.helper.paging.Sort;
-import bangmaple.helper.query.SQLQueryType;
+import bangmaple.jdbc.utils.ConnectionManager;
+import bangmaple.jdbc.utils.JdbcRepositoryParams;
+import bangmaple.jdbc.paging.Page;
+import bangmaple.jdbc.paging.Pageable;
+import bangmaple.jdbc.paging.Sort;
+import bangmaple.jdbc.query.SQLQueryType;
 
 import java.lang.reflect.ParameterizedType;
 import java.sql.Connection;
@@ -26,9 +26,9 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
 
     private static final String ERROR_WHILE_CLOSING_CONNECTION = "There is an error while closing the connection from the database!";
 
-    private Connection conn;
-    private PreparedStatement prStm;
-    private ResultSet rs;
+    protected Connection conn;
+    protected PreparedStatement prStm;
+    protected ResultSet rs;
 
     public JdbcRepository() {
         System.out.println("die");
@@ -50,8 +50,8 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
         conn = ConnectionManager.getConnection();
         try {
             T entity = getEntityInstance();
-            conn.setCatalog(getDatabaseNameFromEntity(entity));
             if (Objects.nonNull(conn)) {
+                conn.setCatalog(getDatabaseNameFromEntity(entity));
                 JdbcRepositoryParams<T, ID> params
                         = new JdbcRepositoryParams<>(entity, FIND_BY_ID_QUERY, SQLQueryType.SELECT);
                 if (DEBUG) {
@@ -144,7 +144,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
             if (Objects.nonNull(conn)) {
                 conn.setCatalog(getDatabaseNameFromEntity(entity));
                 String queryString = getUpdateQueryStringWithEntityFields(entity, UPDATE_QUERY);
-                JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, queryString, id, SQLQueryType.UPDATE);
+                JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, id, queryString, SQLQueryType.UPDATE);
                 if (DEBUG) {
                     LOGGER.log(Level.INFO, params.getSqlQuery());
                 }
@@ -172,8 +172,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
             assignIdToEntity(entity, id);
             if (Objects.nonNull(conn)) {
                 conn.setCatalog(getDatabaseNameFromEntity(entity));
-                JdbcRepositoryParams<T, ID> params
-                        = new JdbcRepositoryParams<>(getEntityInstance(), DELETE_BY_ID_QUERY, id, SQLQueryType.DELETE);
+                JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, DELETE_BY_ID_QUERY, SQLQueryType.DELETE);
                 if (DEBUG) {
                     LOGGER.log(Level.INFO, params.getSqlQuery());
                 }
@@ -193,8 +192,8 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
         conn = ConnectionManager.getConnection();
         try {
             T entity = getEntityInstance();
-            conn.setCatalog(getDatabaseNameFromEntity(entity));
             if (Objects.nonNull(conn)) {
+                conn.setCatalog(getDatabaseNameFromEntity(entity));
                 JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, DELETE_ALL_QUERY, SQLQueryType.DELETE);
                 System.out.println(params.getSqlQuery());
                 prStm = conn.prepareStatement(params.getSqlQuery());

@@ -1,4 +1,4 @@
-package bangmaple.helper.annotations;
+package bangmaple.jdbc.annotations;
 
 import java.lang.annotation.*;
 
@@ -6,7 +6,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface Database {
+public @interface Table {
     String name() default "";
     String catalog() default "";
     String schema() default "";

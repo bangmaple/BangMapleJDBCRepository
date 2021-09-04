@@ -1,4 +1,4 @@
-package bangmaple.helper.annotations;
+package bangmaple.jdbc.annotations;
 
 import java.lang.annotation.*;
 

@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package bangmaple.helper;
+package bangmaple.jdbc.utils;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;

@@ -1,4 +1,6 @@
-package bangmaple.helper;
+package bangmaple.jdbc.helper;
+
+import bangmaple.jdbc.dao.base.Store;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;

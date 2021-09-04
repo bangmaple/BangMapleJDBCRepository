@@ -1,8 +1,8 @@
-package bangmaple.helper.repository;
+package bangmaple.jdbc.repository;
 
-import bangmaple.helper.paging.Page;
-import bangmaple.helper.paging.Pageable;
-import bangmaple.helper.paging.Sort;
+import bangmaple.jdbc.paging.Page;
+import bangmaple.jdbc.paging.Pageable;
+import bangmaple.jdbc.paging.Sort;
 
 interface IPagingAndSortingRepository<T, ID> extends ICRUDRepository<T ,ID> {
     Page<T> findAll(Pageable pageable);
