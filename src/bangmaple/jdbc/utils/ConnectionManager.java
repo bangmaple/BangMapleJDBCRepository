@@ -19,6 +19,11 @@ public final class ConnectionManager {
 
     private static final String JAVA_EE_ENVIRONMENT = "java:comp/env";
     public static String DATASOURCE_NAME = "JDBCRepository";
+    public static String PROTOCOL;
+    public static String HOST;
+    public static int PORT;
+    public static String USERNAME;
+    public static String PASSWORD;
 
     private static DataSource getJNDIDataSource() throws NamingException {
         Context ctx = new InitialContext();
@@ -31,14 +36,8 @@ public final class ConnectionManager {
             return getJNDIDataSource().getConnection();
         } catch (Exception e) {
             try {
-                String protocol = "jdbc:sqlserver";
-                String databaseName = "users_management";
-                String host = "localhost";
-                int port = 1433;
-                String username = "sa";
-                String password = "Nhatrang1";
-                String connectionString = String.format("%s://%s:%s", protocol, host, port);
-                return DriverManager.getConnection(connectionString, username, password);
+                String connectionString = String.format("%s://%s:%s", PROTOCOL, HOST, PORT);
+                return DriverManager.getConnection(connectionString, USERNAME, PASSWORD);
             } catch (Exception ex) {
                 ex.printStackTrace();
                 return null;

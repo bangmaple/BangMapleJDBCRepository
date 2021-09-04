@@ -9,6 +9,7 @@ import bangmaple.dao.UsersDAO;
 import bangmaple.dto.UsersDTO;
 import bangmaple.jdbc.dao.base.Store;
 import bangmaple.jdbc.repository.JdbcRepository;
+import bangmaple.jdbc.utils.ConnectionManager;
 
 import java.util.Arrays;
 
@@ -19,8 +20,15 @@ import java.util.Arrays;
 public class Main {
 
    public static void main(String[] args) throws Exception {
+       //config
        JdbcRepository.DEBUG = false;
-        UsersDAO dao = Store.select(UsersDAO.class);
+       ConnectionManager.PROTOCOL = "jdbc:sqlserver";
+       ConnectionManager.HOST = "localhost";
+       ConnectionManager.PORT = 1433;
+       ConnectionManager.USERNAME = "sa";
+       ConnectionManager.PASSWORD = "Nhatrang1";
+
+       UsersDAO dao = Store.select(UsersDAO.class);
        System.out.println(dao.findUsersByRole("Administrator"));
        System.out.println(dao.findAllByIds(Arrays.asList("admin", "mod", "beluga", "hecker", "eugene")));;
        dao.insert(new UsersDTO("ad", "ad", "Admin", "ad"));

@@ -27,8 +27,10 @@ public class UsersDAO extends Store<UsersDTO, String> {
         conn = ConnectionManager.getConnection();
         try {
             if (conn != null) {
+                conn.setCatalog("users_management");
                 String query = "SELECT username, password, fullname, role FROM users WHERE role = ?";
                 prStm = conn.prepareStatement(query);
+                prStm.setString(1, role);
                 rs = prStm.executeQuery();
                 list = new ArrayList<>();
                 while (rs.next()) {
