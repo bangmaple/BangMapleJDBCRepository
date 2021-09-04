@@ -1,6 +1,12 @@
 # BangMapleJDBCRepository
-Inspired by the JpaRepository of Spring framework which also provides many capabilities for the operations like CRUD, Pagination and Sorting.
-
+- Inspired by the JpaRepository of Spring framework which also provides many capabilities
+for the CRUD, Pagination and Sorting operations.
+- Maximizing the performance by using the native JDBC API with built-in Thread-safe Singleton pattern
+for your Data Access Objects (DAO).
+- Annotate your DTO with @Table, @Id, @Column to map your DTO to the table (Inspired by the ORM).
+- Friendly-to-use syntax to retrieving your DAO by classpath or class type (Inspired by the Store of the NgRX library for Angular framework):
+  `Store.select(UsersDAO.class)` to get UsersDAO instance.
+  `Store.select("com.bangmaple.dao.UsersDAO")` to also get the UsersDAO instance.
 ---------------
 ## 🛠 Features:
 
@@ -15,7 +21,6 @@ Inspired by the JpaRepository of Spring framework which also provides many capab
 ## 🔌 To do:
 
 - Add support for MySQL and PostgreSQL.
-- Add support for the Paging and Sorting operations.
 
 ## ❓ How to use:
 - Create a new project then add this library by download the jar file from the `Release` tab.
@@ -96,14 +101,36 @@ Now we have all the methods we need, I will list them all by the below table:
 | deleteById(ID) | The id of the entity | void | Deletes the entity with the given id. | 
 | existsById(ID) | The id of the entity | boolean | Returns whether an entity with the given id exists. |
 | findAll() | void | Iterable<T> | Returns all instances of the type. |
-| findAll(Pageable) | PASSWORD (String) | Iterable<T> | Returns entities meeting the paging restriction provided in the `Pageable` object. |
-| findAll(boolean) | PASSWORD (String) | Iterable<T> | Returns all entities sorted by the given option. |
+| findAll(Pageable) | Pageable object will be described below | Iterable<T> | Returns entities meeting the paging restriction provided in the `Pageable` object. |
+| findAll(boolean) | boolean will be described below | Iterable<T> | Returns all entities sorted by the given option. |
 | findAllByIds(Iterable<? extends ID>) | Iterable<T> | void | Returns all instances of the type {@code T} with the given IDs. |
 | findById(ID) | The id of the entity | T | Retrieves an entity by its id. |
-| insert(T) | PASSWORD (String) | void | Insert the entity to the table as a record. |
-| insertAll(Iterable<T>) | PASSWORD (String) | void | Insert the entities to the table as records. |
+| insert(T) | The entity to be inserted | void | Insert the entity to the table as a record. |
+| insertAll(Iterable<T>) | The list of entities to be inserted | void | Insert the entities to the table as records. |
 | update(T, ID) | The entity to be updated, the id corresponding to the entity to be updated. | void | Update the specified entity with the corresponding id. |
 | updateAll(Iterable<T>, Iterable<? extends ID> | The list entities to be updated, the list of ids corresponding to the the list of entities to be updated. | void | Update the specified entities with the corresponding ids.  |
+
+- We found that there are two operations `findAll(Pageable)` and `findAll(boolean)`.
+  + For the `Pageable` there are many way to use this operation:
+  
+
+  ![](./assets/6.png)
+  + Respects to the `PageRequest` object, we used the `of` method. For the example, we want to retrieve `5` records by the `first` page then we use `PageRequest.of(0, 5);`.
+  
+
+  ![](./assets/7.png)
+  + Now we passed the third parameter - `Pageable.SORT_DESC` this will be described as we want to retrieve `5` records 
+by the `first` page in the `descending` order then we used `PageRequest.of(0, 5, Pageable.SORT_DESC)`. 
+  ![](./assets/8.png)
+  + By default `Pagination` operation, the records are ordered by the primary key column (property that is annotated with `@Id`).
+  + Now that we passed the final parameter - `String...`. For example, we want to retrieve `5` records
+    by the `first` page in the `descending` order based on `fullname` and `role` then we used `PageRequest.of(0, 5, Pageable.SORT_DESC, "fullname", "role")`.
+
+- For the complete example of the CRUD operations, please navigate to <a href="https://github.com/bangmaple/BangMapleJDBCRepository/blob/master/src/bangmaple/Main.java">this</a> page.
+- For the example of Data Source configuration as `context.xml`, please navigate to <a href="https://github.com/bangmaple/BangMapleJDBCRepository/blob/master/src/META-INF/context.xml">this</a> page.
+
+### Thank your using this library. I made this library for more than 72 hours.
+### Please don't hesitate to report bug(s) if you found, thanks again in advance!
 
 ----------------
 ### 💌 Credits
