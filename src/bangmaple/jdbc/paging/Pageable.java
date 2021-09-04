@@ -1,7 +1,5 @@
 package bangmaple.jdbc.paging;
 
-import java.util.Optional;
-
 public interface Pageable {
 
     boolean SORT_ASC = true;

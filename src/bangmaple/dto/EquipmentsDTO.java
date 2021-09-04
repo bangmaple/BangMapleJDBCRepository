@@ -13,7 +13,7 @@ import bangmaple.jdbc.annotations.Table;
  *
  * @author bangmaple
  */
-@Table(name = "equipments", catalog = "LAB231_1")
+@Table(name = "equipments", catalog = "equipments_management")
 public class EquipmentsDTO {
 
     @Id

@@ -8,6 +8,8 @@ package bangmaple;
 import bangmaple.dao.UsersDAO;
 import bangmaple.dto.UsersDTO;
 import bangmaple.jdbc.dao.base.Store;
+import bangmaple.jdbc.paging.PageRequest;
+import bangmaple.jdbc.paging.Pageable;
 import bangmaple.jdbc.repository.JdbcRepository;
 import bangmaple.jdbc.utils.ConnectionManager;
 
@@ -51,6 +53,10 @@ public class Main {
         System.out.println(dao.count());
         dao.deleteAll();
        dao.deleteAllByIds(Arrays.asList("1", "2", "3", "4"));
+       System.out.println(dao.findAll(PageRequest.of(1, 5)));
+       System.out.println(dao.findAll(PageRequest.of(0, 4, Pageable.SORT_DESC)));
+       System.out.println(dao.findAll(PageRequest.of(0, 4, Pageable.SORT_DESC, "username", "fullname")));
+       System.out.println(dao.findAll(Pageable.SORT_DESC));
     }
     
 }
