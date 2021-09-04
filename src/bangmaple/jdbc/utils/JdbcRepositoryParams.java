@@ -1,12 +1,10 @@
 package bangmaple.jdbc.utils;
 
-import bangmaple.jdbc.annotations.Id;
 import bangmaple.jdbc.annotations.Table;
 import bangmaple.jdbc.helper.RepositoryHelper;
 import bangmaple.jdbc.query.SQLQueryType;
 
 import java.lang.reflect.Field;
-import java.util.Objects;
 
 import static bangmaple.jdbc.helper.RepositoryHelper.getIdFieldNameFromFields;
 import static bangmaple.jdbc.helper.RepositoryHelper.getStringParamValuesFromEntity;
@@ -21,7 +19,6 @@ public class JdbcRepositoryParams<T, ID> {
 
     private JdbcRepositoryParams() {}
 
-
     public JdbcRepositoryParams(T entity, String sqlQuery, SQLQueryType sqlType) {
         postConstruct(entity, null, sqlQuery, sqlType);
     }
@@ -34,58 +31,23 @@ public class JdbcRepositoryParams<T, ID> {
         return fields;
     }
 
-    public void setFields(Field[] fields) {
-        this.fields = fields;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
-    public String getSqlColumnParams() {
-        return sqlColumnParams;
-    }
-
-    public void setSqlColumnParams(String sqlColumnParams) {
-        this.sqlColumnParams = sqlColumnParams;
-    }
-
-    public String getSqlColumnParamValues() {
-        return sqlColumnParamValues;
-    }
-
-    public void setSqlColumnParamValues(String sqlColumnParamValues) {
-        this.sqlColumnParamValues = sqlColumnParamValues;
-    }
-
     public String getSqlQuery() {
         return sqlQuery;
     }
-
-    public void setSqlQuery(String sqlQuery) {
-        this.sqlQuery = sqlQuery;
-    }
-
 
     public void postConstruct(T entity, ID id, String sqlQuery, SQLQueryType sqlType) {
         this.fields = entity.getClass().getDeclaredFields();
         this.tableName = entity.getClass().getAnnotation(Table.class).name();
         String idFieldName = getIdFieldNameFromFields(fields);
         this.sqlColumnParams = RepositoryHelper.getParametersString(fields);
-        Field idField = null;
-        for (Field field : fields) {
-            if (Objects.nonNull(field.getAnnotation(Id.class))) {
-                idField = field;
-            }
-        }
         if (sqlType.compareTo(SQLQueryType.DELETE) == 0) {
-            this.sqlQuery = String.format(sqlQuery, tableName);
+            if (sqlQuery.split("%").length > 1) {
+                this.sqlQuery = String.format(sqlQuery, tableName, idFieldName);
+            } else {
+                this.sqlQuery = String.format(sqlQuery, tableName);
+            }
         } else if (sqlType.compareTo(SQLQueryType.COUNT) == 0) {
-            this.sqlQuery = String.format(sqlQuery, idField.getName(), tableName, idField.getName());
+            this.sqlQuery = String.format(sqlQuery, idFieldName, tableName, idFieldName);
         } else if (sqlType.compareTo(SQLQueryType.SELECT) == 0) {
             this.sqlQuery = String.format(sqlQuery, sqlColumnParams, tableName, idFieldName);
         } else if (sqlType.compareTo(SQLQueryType.CREATE) == 0) {
@@ -93,7 +55,6 @@ public class JdbcRepositoryParams<T, ID> {
             this.sqlQuery = String.format(sqlQuery, tableName, sqlColumnParams, paramValues);
         } else if (sqlType.compareTo(SQLQueryType.UPDATE) == 0) {
             this.sqlQuery = String.format(sqlQuery, tableName, idFieldName, "'" + id + "'");
-            System.out.println(this.getSqlQuery());
         }
     }
 }

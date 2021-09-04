@@ -8,6 +8,7 @@ package bangmaple;
 import bangmaple.dao.UsersDAO;
 import bangmaple.dto.UsersDTO;
 import bangmaple.jdbc.dao.base.Store;
+import bangmaple.jdbc.repository.JdbcRepository;
 
 import java.util.Arrays;
 
@@ -18,8 +19,11 @@ import java.util.Arrays;
 public class Main {
 
    public static void main(String[] args) throws Exception {
+       JdbcRepository.DEBUG = false;
         UsersDAO dao = Store.select(UsersDAO.class);
-      //  dao.insert(new UsersDTO("ad", "ad", "Admin", "ad"));
+       System.out.println(dao.findUsersByRole("Administrator"));
+       System.out.println(dao.findAllByIds(Arrays.asList("admin", "mod", "beluga", "hecker", "eugene")));;
+       dao.insert(new UsersDTO("ad", "ad", "Admin", "ad"));
        dao.insertAll(Arrays.asList(
                 new UsersDTO("admin", "admin", "Admin", "Administrator"),
                 new UsersDTO("user", "user", "User", "User"),
@@ -35,9 +39,10 @@ public class Main {
         System.out.println(dao.existsById("user"));
         UsersDTO dto = new UsersDTO("admin", "admin", "Administrator", "Admin");
         dao.update(dto, "admin");
-       // dao.deleteById("admin");
+        dao.deleteById("admin");
         System.out.println(dao.count());
-        // dao.deleteAll();
+        dao.deleteAll();
+       dao.deleteAllByIds(Arrays.asList("1", "2", "3", "4"));
     }
     
 }

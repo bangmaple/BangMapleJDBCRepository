@@ -21,8 +21,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public abstract class JdbcRepository<T, ID> implements IPagingAndSortingRepository<T, ID> {
+
     private static final Logger LOGGER = Logger.getGlobal();
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
 
     private static final String ERROR_WHILE_CLOSING_CONNECTION = "There is an error while closing the connection from the database!";
 
@@ -30,8 +31,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     protected PreparedStatement prStm;
     protected ResultSet rs;
 
-    public JdbcRepository() {
-        System.out.println("die");
+    protected JdbcRepository() {
     }
 
     private static final String FIND_BY_ID_QUERY = "SELECT %s FROM %s WHERE %s = ?";
@@ -120,13 +120,13 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
             conn = ConnectionManager.getConnection();
             try {
                 if (Objects.nonNull(conn) && !list.isEmpty()) {
+                    conn.setAutoCommit(false);
                     T entity = list.get(0);
                     conn.setCatalog(getDatabaseNameFromEntity(entity));
-                    conn.setAutoCommit(false);
                     JdbcRepositoryParams<T, ID> params
                             = new JdbcRepositoryParams<>(entity, INSERT_ONE_QUERY, SQLQueryType.CREATE);
                     prStm = conn.prepareStatement(params.getSqlQuery());
-                    addToBatchThenCommitProperly(list, params, conn, prStm);
+                    addToBatchThenCommitProperly(list, params, conn, prStm, SQLQueryType.CREATE);
                 }
             } catch (Exception e) {
                 rollbackTransaction(conn);
@@ -134,6 +134,8 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
             } finally {
                 closeConnection();
             }
+        } else {
+            throw new RuntimeException("Currently only support List data structure!");
         }
     }
 
@@ -161,7 +163,35 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
 
     @Override
     public void updateAll(Iterable<T> entities, Iterable<ID> ids) {
-
+        T entity = getEntityInstance();
+        if (entities instanceof List) {
+            List<T> listEntities = (List<T>)entities;
+            List<ID> listIds = (List<ID>) ids;
+            conn = ConnectionManager.getConnection();
+            try {
+                if (Objects.nonNull(conn)) {
+                    conn.setCatalog(getDatabaseNameFromEntity(entity));
+                    String queryString = getUpdateQueryStringWithEntityFields(entity, UPDATE_QUERY);
+                    int size = listEntities.size();
+                    for (int i = 0; i < size; i++) {
+                        JdbcRepositoryParams<T, ID> params
+                                = new JdbcRepositoryParams<>(listEntities.get(i), listIds.get(i), queryString, SQLQueryType.UPDATE);
+                        if (DEBUG) {
+                            LOGGER.log(Level.INFO, params.getSqlQuery());
+                        }
+                        prStm = conn.prepareStatement(params.getSqlQuery());
+                        bindValueToSQLBindingParams(listEntities.get(i), prStm, SQLQueryType.UPDATE);
+                        prStm.executeUpdate();
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            } finally {
+                closeConnection();
+            }
+        } else {
+            throw new RuntimeException("Currently only support List data structure!");
+        }
     }
 
     @Override
@@ -195,7 +225,9 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
             if (Objects.nonNull(conn)) {
                 conn.setCatalog(getDatabaseNameFromEntity(entity));
                 JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, DELETE_ALL_QUERY, SQLQueryType.DELETE);
-                System.out.println(params.getSqlQuery());
+                if (DEBUG) {
+                    LOGGER.log(Level.INFO, params.getSqlQuery());
+                }
                 prStm = conn.prepareStatement(params.getSqlQuery());
                 prStm.executeUpdate();
             }
@@ -207,8 +239,30 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void deleteAllByIds(Iterable<? extends ID> ids) {
-
+        if (ids instanceof List) {
+            List<? extends ID> list = (List<? extends ID>) ids;
+            conn = ConnectionManager.getConnection();
+            try {
+                if (Objects.nonNull(conn) && !list.isEmpty()) {
+                    conn.setAutoCommit(false);
+                    T entity = getEntityInstance();
+                    conn.setCatalog(getDatabaseNameFromEntity(entity));
+                    JdbcRepositoryParams<T, ID> params
+                            = new JdbcRepositoryParams<>(entity, DELETE_BY_ID_QUERY, SQLQueryType.DELETE);
+                    prStm = conn.prepareStatement(params.getSqlQuery());
+                    addToBatchThenCommitProperly(list, params, conn, prStm, SQLQueryType.DELETE);
+                }
+            } catch (Exception e) {
+                rollbackTransaction(conn);
+                throw new RuntimeException(e);
+            } finally {
+                closeConnection();
+            }
+        } else {
+            throw new RuntimeException("Currently only support List data structure!");
+        }
     }
 
     @Override
@@ -237,8 +291,44 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Iterable<T> findAllByIds(Iterable<? extends ID> ids) {
-        return null;
+        List<T> result = null;
+        if (ids instanceof List) {
+            List<? extends ID> list = (List<? extends ID>) ids;
+            conn = ConnectionManager.getConnection();
+            try {
+                if (Objects.nonNull(conn) && !list.isEmpty()) {
+                    conn.setAutoCommit(false);
+                    T entity = getEntityInstance();
+                    conn.setCatalog(getDatabaseNameFromEntity(entity));
+                    result = new LinkedList<>();
+                    JdbcRepositoryParams<T, ID> params
+                            = new JdbcRepositoryParams<>(entity, FIND_BY_ID_QUERY, SQLQueryType.SELECT);
+                    for (ID id: list) {
+                        if (DEBUG) {
+                            LOGGER.log(Level.INFO, params.getSqlQuery());
+                        }
+                        prStm = conn.prepareStatement(params.getSqlQuery());
+                        prStm.setObject(1, id);
+                        rs = prStm.executeQuery();
+                        if (rs.next()) {
+                            result.add(parseFromTableDataToEntity(params.getFields(), rs, getEntityInstance()));
+                        } else {
+                            result.add(null);
+                        }
+                        closePreparedStatement();
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            } finally {
+                closeConnection();
+            }
+        } else {
+            throw new RuntimeException("Currently only support List data structure!");
+        }
+        return result;
     }
 
     @Override
@@ -285,6 +375,19 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
             return getEntityClass().newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             return null;
+        }
+    }
+
+    protected void closePreparedStatement() {
+        try {
+            if (Objects.nonNull(rs)) {
+                rs.close();
+            }
+            if (Objects.nonNull(prStm)) {
+                prStm.close();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(ERROR_WHILE_CLOSING_CONNECTION);
         }
     }
 

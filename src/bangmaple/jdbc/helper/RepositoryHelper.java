@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -28,6 +29,10 @@ public interface RepositoryHelper {
 
     static <T> void bindValueToSQLBindingParams(T entity, PreparedStatement prStm, SQLQueryType sqlType)
             throws IllegalAccessException, SQLException {
+        if (entity instanceof String) {
+            prStm.setObject(1, entity);
+            return;
+        }
         Field[] fields = entity.getClass().getDeclaredFields();
         int lastParamCount = fields.length;
         for (Field field : fields) {
@@ -83,7 +88,21 @@ public interface RepositoryHelper {
         }
         throw new IllegalArgumentException();
     }
-
+    static <T> T parseResultSetToDTO(ResultSet resultSet, Class<T> clazz) throws SQLException {
+        T entity = null;
+        try {
+            Field[] fields = clazz.getDeclaredFields();
+            entity = clazz.newInstance();
+            for (Field field : fields) {
+                field.setAccessible(true);
+                String columnName = getTableColumnNameFromField(field);
+                field.set(entity, resultSet.getObject(columnName));
+            }
+        } catch (IllegalAccessException | InstantiationException e) {
+            throw new RuntimeException(e);
+        }
+        return entity;
+    }
 
     static <T> T parseFromTableDataToEntity(Field[] fields, ResultSet resultSet, T entity) throws SQLException,
             IllegalAccessException, InstantiationException {
@@ -91,6 +110,21 @@ public interface RepositoryHelper {
             field.setAccessible(true);
             String columnName = getTableColumnNameFromField(field);
             field.set(entity, resultSet.getObject(columnName));
+        }
+        return entity;
+    }
+
+    @SuppressWarnings("unchecked")
+    static <T> T parseFromTableDataToEntity(Field[] fields, ResultSet resultSet) throws SQLException,
+            IllegalAccessException, InstantiationException {
+        T entity = null;
+        if (fields.length > 0) {
+            entity = (T) fields[0].getDeclaringClass().newInstance();
+            for (Field field : fields) {
+                field.setAccessible(true);
+                String columnName = getTableColumnNameFromField(field);
+                field.set(entity, resultSet.getObject(columnName));
+            }
         }
         return entity;
     }
@@ -122,6 +156,11 @@ public interface RepositoryHelper {
         conn.commit();
     }
 
+    static void commitTransaction(Connection conn, PreparedStatement prStm) throws SQLException {
+        prStm.executeBatch();
+        conn.commit();
+    }
+
     static void rollbackTransaction(Connection conn) {
         try {
             conn.rollback();
@@ -144,20 +183,54 @@ public interface RepositoryHelper {
         }
     }
 
-    static <T> void addToBatchThenCommitProperly(List<T> list, JdbcRepositoryParams params, Connection conn, PreparedStatement prStm)
+    static <T, ID> void addToBatchThenCommitProperly(List<?> list, JdbcRepositoryParams<T, ID> params,
+                                                 Connection conn, PreparedStatement prStm, SQLQueryType sqlType)
             throws SQLException, IllegalAccessException {
         int batchSizeCounter = 0;
-        for (T entityInList : list) {
+        for (int i = 0; i < list.size(); i++) {
             if (JdbcRepository.DEBUG) {
                 LOGGER.log(Level.INFO, params.getSqlQuery());
             }
-            bindValueToSQLBindingParams(entityInList, prStm, SQLQueryType.CREATE);
+            if (sqlType.compareTo(SQLQueryType.CREATE) == 0) {
+                bindValueToSQLBindingParams(list.get(i), prStm, SQLQueryType.CREATE);
+            } else if (sqlType.compareTo(SQLQueryType.DELETE) == 0) {
+                bindValueToSQLBindingParams(list.get(i), prStm, SQLQueryType.DELETE);
+            } else if (sqlType.compareTo(SQLQueryType.UPDATE) == 0) {
+                bindValueToSQLBindingParams(list.get(i), prStm, SQLQueryType.UPDATE);
+            }
             prStm.addBatch();
             if (shouldCommitBatch(++batchSizeCounter)) {
                 commitBatchTransaction(conn, prStm);
             }
         }
         commitBatchTransaction(conn, prStm);
+    }
+
+    static <T, ID> List<T> addToBatchThenCommitProperlyForFind(List<?> list, JdbcRepositoryParams<T, ID> params,
+                                                     Connection conn, PreparedStatement prStm, SQLQueryType sqlType)
+            throws SQLException, IllegalAccessException, InstantiationException {
+        ResultSet rs = null;
+        List<T> result = null;
+        int batchSizeCounter = 0;
+        for (int i = 0; i < list.size(); i++) {
+            if (JdbcRepository.DEBUG) {
+                LOGGER.log(Level.INFO, params.getSqlQuery());
+            }
+            if (sqlType.compareTo(SQLQueryType.SELECT) == 0) {
+                bindValueToSQLBindingParams(list.get(i), prStm, SQLQueryType.SELECT);
+            }
+            prStm.addBatch();
+            result = new LinkedList<>();
+            if (shouldCommitBatch(++batchSizeCounter)) {
+                commitTransaction(conn, prStm);
+            }
+            rs = prStm.executeQuery();
+            while (rs.next()) {
+                list.add(parseFromTableDataToEntity(params.getFields(), rs));
+            }
+        }
+        commitTransaction(conn, prStm);
+        return result;
     }
 
     static Field getIdFieldFromEntityFields(Field[] fields) {

@@ -1,9 +1,12 @@
 package bangmaple.jdbc.dao.base;
 
+import bangmaple.jdbc.helper.RepositoryHelper;
 import bangmaple.jdbc.helper.StoreHelper;
 import bangmaple.jdbc.repository.JdbcRepository;
 
 import java.lang.reflect.InvocationTargetException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class Store<T, ID> extends JdbcRepository<T, ID> implements StoreHelper {
 
@@ -20,5 +23,9 @@ public class Store<T, ID> extends JdbcRepository<T, ID> implements StoreHelper {
             Class<D> clazz = StoreHelper.getClassFromCanonicalClassName(classPath);
             return StoreHelper.queryClassInstanceFromStore(clazz);
         }
+    }
+
+    protected T parseResultSetToDTO(ResultSet rs, Class<T> clazz) throws SQLException {
+        return RepositoryHelper.parseResultSetToDTO(rs, clazz);
     }
 }
