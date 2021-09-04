@@ -1,25 +1,27 @@
 package bangmaple.jdbc.paging;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 public class PageRequest extends AbstractPageRequest implements Serializable {
 
     private static final long serialVersionUID = -4541509938956089562L;
 
-    private final Sort sort;
+    private boolean ordering = true;
+    private String[] properties = {};
 
     /**
      * Creates a new {@link PageRequest} with sort parameters applied.
      *
      * @param page zero-based page index, must not be negative.
      * @param size the size of the page to be returned, must be greater than 0.
-     * @param sort must not be {@literal null}, use {@link Sort#unsorted()} instead.
      */
-    protected PageRequest(int page, int size, Sort sort) {
+    protected PageRequest(int page, int size, boolean ordering, String... properties) {
 
         super(page, size);
 
-        this.sort = sort;
+        this.ordering = ordering;
+        this.properties = properties;
     }
 
     /**
@@ -29,30 +31,30 @@ public class PageRequest extends AbstractPageRequest implements Serializable {
      * @param size the size of the page to be returned, must be greater than 0.
      */
     public static PageRequest of(int page, int size) {
-        return of(page, size, Sort.unsorted());
+        return new PageRequest(page, size, Pageable.SORT_ASC, "");
     }
 
     /**
      * Creates a new {@link PageRequest} with sort parameters applied.
      *
-     * @param page zero-based page index.
-     * @param size the size of the page to be returned.
-     * @param sort must not be {@literal null}, use {@link Sort#unsorted()} instead.
-      */
-    public static PageRequest of(int page, int size, Sort sort) {
-        return new PageRequest(page, size, sort);
+     * @param page     zero-based page index.
+     * @param size     the size of the page to be returned.
+     * @param ordering Pageable.ASC (true) for Ascending order, Pageable.DESC (false) for Descending order.
+     */
+    public static PageRequest of(int page, int size, boolean ordering) {
+        return new PageRequest(page, size, ordering, "");
     }
 
     /**
      * Creates a new {@link PageRequest} with sort direction and properties applied.
      *
-     * @param page zero-based page index, must not be negative.
-     * @param size the size of the page to be returned, must be greater than 0.
-     * @param direction must not be {@literal null}.
+     * @param page       zero-based page index, must not be negative.
+     * @param size       the size of the page to be returned, must be greater than 0.
+     * @param ordering   Pageable.ASC (true) for Ascending order, Pageable.DESC (false) for Descending order.
      * @param properties must not be {@literal null}.
      */
-    public static PageRequest of(int page, int size, Sort.Direction direction, String... properties) {
-        return of(page, size, Sort.by(direction, properties));
+    public static PageRequest of(int page, int size, boolean ordering, String... properties) {
+        return new PageRequest(page, size, ordering, properties);
     }
 
     /**
@@ -65,85 +67,31 @@ public class PageRequest extends AbstractPageRequest implements Serializable {
         return PageRequest.of(0, pageSize);
     }
 
-    public Sort getSort() {
-        return sort;
+    @Override
+    public boolean isAscending() {
+        return ordering == Pageable.SORT_ASC;
     }
 
     @Override
-    public Pageable next() {
-        return (Pageable) new PageRequest(getPageNumber() + 1, getPageSize(), getSort());
+    public boolean isDescending() {
+        return ordering == Pageable.SORT_DESC;
     }
 
-    /*
-     * (non-Javadoc)
-     */
-    @Override
-    public Pageable previous() {
-        return (Pageable) (getPageNumber() == 0 ? this : new PageRequest(getPageNumber() - 1, getPageSize(), getSort()));
-    }
-
-    @Override
-    public Pageable first() {
-        return (Pageable) new PageRequest(0, getPageSize(), getSort());
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see java.lang.Object#equals(java.lang.Object)
-     */
-    @Override
-    public boolean equals( Object obj) {
-
-        if (this == obj) {
-            return true;
+    public String getProperties() {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < properties.length; i++) {
+            if (i == properties.length - 1) {
+                result.append(properties[i]);
+                break;
+            }
+            result.append(properties[i]).append(", ");
         }
-
-        if (!(obj instanceof PageRequest)) {
-            return false;
-        }
-
-        PageRequest that = (PageRequest) obj;
-
-        return super.equals(that) && this.sort.equals(that.sort);
+        return result.toString();
     }
 
-    /**
-     * Creates a new {@link PageRequest} with {@link Sort.Direction} and {@code properties} applied.
-     *
-     * @param direction must not be {@literal null}.
-     * @param properties must not be {@literal null}.
-     * @return a new {@link PageRequest}.
-     */
-    public PageRequest withSort(Sort.Direction direction, String... properties) {
-        return new PageRequest(getPageNumber(), getPageSize(), Sort.by(direction, properties));
-    }
-
-    /**
-     * Creates a new {@link PageRequest} with {@link Sort} applied.
-     *
-     * @param sort must not be {@literal null}.
-     * @return a new {@link PageRequest}.
-     */
-    public PageRequest withSort(Sort sort) {
-        return new PageRequest(getPageNumber(), getPageSize(), sort);
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see java.lang.Object#hashCode()
-     */
-    @Override
-    public int hashCode() {
-        return 31 * super.hashCode() + sort.hashCode();
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
     @Override
     public String toString() {
-        return String.format("Page request [number: %d, size %d, sort: %s]", getPageNumber(), getPageSize(), sort);
+        return String.format("Page request [number: %d, size %d]", getPageNumber(), getPageSize());
     }
 
 }

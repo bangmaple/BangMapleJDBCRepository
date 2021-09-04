@@ -4,9 +4,7 @@ import static bangmaple.jdbc.helper.RepositoryHelper.*;
 
 import bangmaple.jdbc.utils.ConnectionManager;
 import bangmaple.jdbc.utils.JdbcRepositoryParams;
-import bangmaple.jdbc.paging.Page;
 import bangmaple.jdbc.paging.Pageable;
-import bangmaple.jdbc.paging.Sort;
 import bangmaple.jdbc.query.SQLQueryType;
 
 import java.lang.reflect.ParameterizedType;
@@ -166,7 +164,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     public void updateAll(Iterable<T> entities, Iterable<ID> ids) {
         T entity = getEntityInstance();
         if (entities instanceof List) {
-            List<T> listEntities = (List<T>)entities;
+            List<T> listEntities = (List<T>) entities;
             List<ID> listIds = (List<ID>) ids;
             conn = ConnectionManager.getConnection();
             try {
@@ -306,7 +304,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
                     result = new LinkedList<>();
                     JdbcRepositoryParams<T, ID> params
                             = new JdbcRepositoryParams<>(entity, FIND_BY_ID_QUERY, SQLQueryType.SELECT);
-                    for (ID id: list) {
+                    for (ID id : list) {
                         if (DEBUG) {
                             LOGGER.log(Level.INFO, params.getSqlQuery());
                         }
@@ -356,14 +354,68 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     }
 
     @Override
-    public Page<T> findAll(Pageable pageable) {
-        return null;
+    public Iterable<T> findAll(Pageable pageable) {
+        T entity = getEntityInstance();
+        List<T> list = new LinkedList<>();
+        conn = ConnectionManager.getConnection();
+        try {
+            if (Objects.nonNull(conn)) {
+                conn.setCatalog(getDatabaseNameFromEntity(entity));
+                StringBuilder query = new StringBuilder("SELECT %s FROM %s ORDER BY ")
+                        .append(pageable.getProperties().length() < 1
+                        ? getIdFieldNameFromFields(entity.getClass().getDeclaredFields())
+                        : pageable.getProperties())
+                        .append(" ").append(pageable.isAscending() ? "ASC" : "DESC")
+                        .append(" ").append(" OFFSET ")
+                        .append(pageable.getPageNumber() * pageable.getPageSize()).append(" ROWS FETCH NEXT ")
+                        .append(pageable.getPageSize()).append(" ROWS ONLY");
+                JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, query.toString(), SQLQueryType.SELECT);
+                if (DEBUG) {
+                    LOGGER.log(Level.INFO, params.getSqlQuery());
+                }
+                prStm = conn.prepareStatement(params.getSqlQuery());
+                rs = prStm.executeQuery();
+                while (rs.next()) {
+                    entity = getEntityInstance();
+                    list.add(parseFromTableDataToEntity(params.getFields(), rs, entity));
+                }
+            }
+        } catch (SQLException | IllegalAccessException | InstantiationException e) {
+            throw new RuntimeException(e);
+        } finally {
+            closeConnection();
+        }
+        return list;
     }
 
     @Override
-    public Iterable<T> findAll(Sort sort) {
-        return null;
-    }
+    public Iterable<T> findAll(boolean ordering) {
+        T entity = getEntityInstance();
+        List<T> list = new LinkedList<>();
+        conn = ConnectionManager.getConnection();
+        try {
+            if (Objects.nonNull(conn)) {
+                conn.setCatalog(getDatabaseNameFromEntity(entity));
+                StringBuilder query = new StringBuilder("SELECT %s FROM %s ORDER BY ")
+                        .append(getIdFieldNameFromFields(entity.getClass().getDeclaredFields()))
+                        .append(" ").append(ordering ? "ASC" : "DESC");
+                JdbcRepositoryParams<T, ID> params = new JdbcRepositoryParams<>(entity, query.toString(), SQLQueryType.SELECT);
+                if (DEBUG) {
+                    LOGGER.log(Level.INFO, params.getSqlQuery());
+                }
+                prStm = conn.prepareStatement(params.getSqlQuery());
+                rs = prStm.executeQuery();
+                while (rs.next()) {
+                    entity = getEntityInstance();
+                    list.add(parseFromTableDataToEntity(params.getFields(), rs, entity));
+                }
+            }
+        } catch (SQLException | IllegalAccessException | InstantiationException e) {
+            throw new RuntimeException(e);
+        } finally {
+            closeConnection();
+        }
+        return list;    }
 
     @SuppressWarnings("unchecked")
     protected Class<T> getEntityClass() {
