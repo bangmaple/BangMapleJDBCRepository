@@ -47,6 +47,64 @@ a `JdbcRepository.DEBUG` variable needed to be set as `true`. Default is `false`
 | ConnectionManager | USERNAME (String) | The username for logging in to the SQL server. Example: `sa` |
 | ConnectionManager | PASSWORD (String) | The password for logging in to the SQL server. Example: `IloveFPT` |
 
+- In order to use the JDBC Repository, you will need DTO and DAO. Let we configure these:
+
+![](./assets/3.png)
+
+| Annotation  | Can be applied on | Description |
+| ------------- | ------------- | ------------ |
+| `Table`  | Class  | Make a class become an object for communicating with the database corresponding with the current mapping table. `name` for specifying the current mapping table, `catalog` for specifying the current mapping database name.|
+| `Id`  | Field  | Mark a field as primary key column. Each DTO class must have at least 1 `Id` annotation applied only for only one field. |
+| `Column` | Field | Mark a field to be mapped with the corresponding table's column. Use `value` to specify the value.|
+
+- Now for the DAO class, create a normal class with a private constructor to respect the Singleton pattern.
+
+![](./assets/4.png)
+
+- You may notice our DAO class extends the `Store` class which will responsible for storing the 
+DAO classes only one instance each class by the Thread-safe Singleton pattern.
+  + Why you named the class is `Store`:
+    + Inspired by the NgRx (@ngrx/store) library for the Angular framework.
+  + What is Singleton pattern? 
+    + It is a pattern to allow class to have only one and one instance during the application's lifecycle.
+    + Preventing initializing many instances of a class to prevent memory leaks.
+  + Why Thread-safe Singleton pattern?
+      + I believe that in a Multithreading environment like `Servlet`, threads will modify/use the instance safely for CRUD operations by applying this pattern.
+- There is one thing that extends the `Store` class requires two generic types `T` and `ID`:
+    + `T` stands for the matching DTO class. For example the `UsersDTO` class.
+    + `ID` stands for the matching Id of the DTO class (table) type. For example, my annotated `Id` field is `String` type.
+    + The result would be `Store<UsersDTO, String>` instead of `Store<T, ID>`.
+For that, we have implemented our CRUD, Pagination, Sorting operations for our application.
+
+To retrieve the `UsersDAO` instance, we have to select the instance:
+![](./assets/5.png)
+
+This is similar to the usual way that we do:
+```java 
+UsersDAO dao = new UsersDAO();
+```
+Please don't initialize the `UsersDAO` instance by using the `new` keyword, this is against the `Singleton pattern`.
+Luckily, we have the implemented `private constructor` to prevent that thing to be happening.
+
+Now we have all the methods we need, I will list them all by the below table:
+
+| Method  | Argument(s) | Returns | Description | 
+| ------------- | ------------- | ------------ | ------------ |
+| count()  | void  | int | Returns the number of entities available.|
+| deleteAll()  | void | void | Delete all the entities. |
+| deleteAllByIds(Iterable<? extends ID>) | List of ids | void | Deletes all instances of entities with the given IDs. |
+| deleteById(ID) | The id of the entity | void | Deletes the entity with the given id. | 
+| existsById(ID) | The id of the entity | boolean | Returns whether an entity with the given id exists. |
+| findAll() | void | Iterable<T> | Returns all instances of the type. |
+| findAll(Pageable) | PASSWORD (String) | Iterable<T> | Returns entities meeting the paging restriction provided in the `Pageable` object. |
+| findAll(boolean) | PASSWORD (String) | Iterable<T> | Returns all entities sorted by the given option. |
+| findAllByIds(Iterable<? extends ID>) | Iterable<T> | void | Returns all instances of the type {@code T} with the given IDs. |
+| findById(ID) | The id of the entity | T | Retrieves an entity by its id. |
+| insert(T) | PASSWORD (String) | void | Insert the entity to the table as a record. |
+| insertAll(Iterable<T>) | PASSWORD (String) | void | Insert the entities to the table as records. |
+| update(T, ID) | The entity to be updated, the id corresponding to the entity to be updated. | void | Update the specified entity with the corresponding id. |
+| updateAll(Iterable<T>, Iterable<? extends ID> | The list entities to be updated, the list of ids corresponding to the the list of entities to be updated. | void | Update the specified entities with the corresponding ids.  |
+
 ----------------
 ### 💌 Credits
 
