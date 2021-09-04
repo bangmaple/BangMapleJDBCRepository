@@ -84,6 +84,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
                 prStm = conn.prepareStatement(params.getSqlQuery());
                 rs = prStm.executeQuery();
                 while (rs.next()) {
+                    entity = getEntityInstance();
                     list.add(parseFromTableDataToEntity(params.getFields(), rs, entity));
                 }
             }

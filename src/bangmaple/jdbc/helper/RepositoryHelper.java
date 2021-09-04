@@ -41,7 +41,9 @@ public interface RepositoryHelper {
                 lastParamCount--;
             }
         }
-        for (int i = 0; i < fields.length; i++) {
+        int size = fields.length;
+        int index = 0;
+        for (int i = index; i < size; i++) {
             fields[i].setAccessible(true);
             if (Objects.nonNull(fields[i].getAnnotation(Id.class))) {
                 prStm.setObject(i + 1, fields[i].get(entity));
@@ -51,8 +53,8 @@ public interface RepositoryHelper {
                     prStm.setObject(i + 1, fields[i].get(entity));
                     return;
                 } else if (sqlType.compareTo(SQLQueryType.UPDATE) == 0) {
-                    prStm.setObject(i + 1, fields[i].get(entity));
-                    prStm.setObject(lastParamCount + 1, fields[i].get(entity));
+                      prStm.setObject(i + 1, fields[i].get(entity));
+                    prStm.setObject(lastParamCount, fields[i].get(entity));
                 } else if (sqlType.compareTo(SQLQueryType.CREATE) == 0) {
                     prStm.setObject(i + 1, fields[i].get(entity));
                 }
@@ -60,9 +62,14 @@ public interface RepositoryHelper {
             }
             if (fields[i].get(entity) != null) {
                 if (i == lastParamCount) {
-                    prStm.setObject(i, fields[i].get(entity));
+                    System.out.println(i + " " + fields[i].getName() + " " + fields[i].get(entity));
+                        prStm.setObject(i, fields[i].get(entity));
                 } else {
-                    prStm.setObject(i + 1, fields[i].get(entity));
+                    if (sqlType.compareTo(SQLQueryType.UPDATE) == 0) {
+                        prStm.setObject(i, fields[i].get(entity));
+                    } else {
+                        prStm.setObject(i + 1, fields[i].get(entity));
+                    }
                 }
             }
         }
@@ -72,10 +79,10 @@ public interface RepositoryHelper {
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < fields.length; i++) {
             if (i == fields.length - 1) {
-                result.append(fields[i].getName());
+                result.append(getColumnNameFromField(fields[i]));
                 break;
             }
-            result.append(fields[i].getName()).append(SQL_QUERY_PARAMS_DELIMITER);
+            result.append(getColumnNameFromField(fields[i])).append(SQL_QUERY_PARAMS_DELIMITER);
         }
         return result.toString();
     }
@@ -83,11 +90,12 @@ public interface RepositoryHelper {
     static String getIdFieldNameFromFields(Field[] fields) {
         for (Field field : fields) {
             if (Objects.nonNull(field.getAnnotation(Id.class))) {
-                return field.getName();
+                return field.getAnnotation(Column.class).value();
             }
         }
         throw new IllegalArgumentException();
     }
+
     static <T> T parseResultSetToDTO(ResultSet resultSet, Class<T> clazz) throws SQLException {
         T entity = null;
         try {
@@ -173,7 +181,7 @@ public interface RepositoryHelper {
         return entity.getClass().getAnnotation(Table.class).catalog();
     }
 
-     static <T, ID> void assignIdToEntity(T entity, ID id) throws IllegalAccessException {
+    static <T, ID> void assignIdToEntity(T entity, ID id) throws IllegalAccessException {
         Field[] fields = entity.getClass().getDeclaredFields();
         for (Field field : fields) {
             if (Objects.nonNull(field.getAnnotation(Id.class))) {
@@ -184,7 +192,7 @@ public interface RepositoryHelper {
     }
 
     static <T, ID> void addToBatchThenCommitProperly(List<?> list, JdbcRepositoryParams<T, ID> params,
-                                                 Connection conn, PreparedStatement prStm, SQLQueryType sqlType)
+                                                     Connection conn, PreparedStatement prStm, SQLQueryType sqlType)
             throws SQLException, IllegalAccessException {
         int batchSizeCounter = 0;
         for (int i = 0; i < list.size(); i++) {
@@ -207,7 +215,7 @@ public interface RepositoryHelper {
     }
 
     static <T, ID> List<T> addToBatchThenCommitProperlyForFind(List<?> list, JdbcRepositoryParams<T, ID> params,
-                                                     Connection conn, PreparedStatement prStm, SQLQueryType sqlType)
+                                                               Connection conn, PreparedStatement prStm, SQLQueryType sqlType)
             throws SQLException, IllegalAccessException, InstantiationException {
         ResultSet rs = null;
         List<T> result = null;
@@ -248,16 +256,20 @@ public interface RepositoryHelper {
         StringBuilder queryString = new StringBuilder(originalQuery);
         Field[] fields = entity.getClass().getDeclaredFields();
         Field idField = getIdFieldFromEntityFields(fields);
-        for (int i = 0; i < fields.length; i++) {
+        for (int i = 1; i < fields.length; i++) {
             if (Objects.nonNull(fields[i].get(entity))) {
                 if (i == fields.length - 1) {
-                    queryString.append(fields[i].getName()).append(" = ?")
-                            .append(" WHERE ").append(idField.getName()).append(" = ?");
+                    queryString.append(getColumnNameFromField(fields[i])).append(" = ?")
+                            .append(" WHERE ").append(getColumnNameFromField(idField)).append(" = ?");
                 } else {
-                    queryString.append(fields[i].getName()).append(" = ?, ");
+                    queryString.append(getColumnNameFromField(fields[i])).append(" = ?, ");
                 }
             }
         }
         return queryString.toString();
+    }
+
+    static String getColumnNameFromField(Field field) {
+        return field.getAnnotation(Column.class).value();
     }
 }
