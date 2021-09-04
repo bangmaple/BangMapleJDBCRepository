@@ -16,10 +16,10 @@ public interface ICRUDRepository<T, ID> extends IRepository<T, ID> {
     void updateAll(Iterable<T> entities, Iterable<ID> ids);
     void deleteById(ID id);
     void deleteAll();
-    void deleteAllByIds(Iterable<? extends T> ids);
+    void deleteAllByIds(Iterable<? extends ID> ids);
     boolean existsById(ID id);
     T findById(ID id);
     Iterable<T> findAll();
-    Iterable<T> findAllByIds(Iterable<? extends T> ids);
+    Iterable<T> findAllByIds(Iterable<? extends ID> ids);
     long count();
 }

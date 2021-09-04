@@ -207,7 +207,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     }
 
     @Override
-    public void deleteAllByIds(Iterable<? extends T> ids) {
+    public void deleteAllByIds(Iterable<? extends ID> ids) {
 
     }
 
@@ -237,7 +237,7 @@ public abstract class JdbcRepository<T, ID> implements IPagingAndSortingReposito
     }
 
     @Override
-    public Iterable<T> findAllByIds(Iterable<? extends T> ids) {
+    public Iterable<T> findAllByIds(Iterable<? extends ID> ids) {
         return null;
     }
 
