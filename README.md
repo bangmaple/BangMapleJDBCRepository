@@ -26,7 +26,7 @@ for your Data Access Objects (DAO).
 - Create a new project then add this library by downloading the jar file from the `Release` tab.
 - Or you can clone this repository without having download the jar file.
 - `Remember to also add the JDBC driver`.
-- For Servlet environment, you can configure like this by creating a 
+- For Servlet environment (non-context.xml users), you can configure like this by creating a 
 new `ServletListener` class or the class you just created that implementing
 the `ServletContextListener` interface then override the `contextInitialized` method:
 ```java
@@ -50,7 +50,9 @@ public class ServletListener implements ServletContextListener {
 ```
 - If you use `META-INF/context.xml` for Database datasource then remember to set the `name` property
 of the `Resource` tag as `JDBCRepository` or the `ConnectionManager` will not initialize 
-- your application, you should configure like this:
+your application, you should configure like this (You don't need to implement ServletListener, 
+the `ConnectionManager` will automatically initialize the Connection Pool if you correctly set-up 
+the `context.xml` file):
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <Context antiJARLocking="true" path="/">
@@ -83,7 +85,7 @@ public class Main {
 
 ## ❗️ Appendix:
 - If you want to show the SQL Query while executing the methods, there is
-a `JdbcRepository.DEBUG` variable needed to be set as `true`. Default is `false`.
+a `JdbcRepository.DEBUG` variable needed to be set as `true`. The default value is `false`.
 - You may notice there is a `ConnectionManager` class.
     + This class responsible for getting the `Connection` instance.
     + If you use Data Source way, there is a file `context.xml` in the `META-INF` folder.
@@ -160,7 +162,7 @@ To retrieve the `UsersDAO` instance, we have to select the instance:
 import bangmaple.jdbc.dao.base.Store;
 
 public class Main {
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     UsersDAO dao = Store.select(UsersDAO.class);
   }
 }
