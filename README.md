@@ -23,16 +23,63 @@ for your Data Access Objects (DAO).
 - Add support for MySQL and PostgreSQL.
 
 ## ❓ How to use:
-- Create a new project then add this library by download the jar file from the `Release` tab.
+- Create a new project then add this library by downloading the jar file from the `Release` tab.
 - Or you can clone this repository without having download the jar file.
 - `Remember to also add the JDBC driver`.
 - For Servlet environment, you can configure like this by creating a 
-new class `ServletListener` or the class implementing the `ServletContextListener` interface :
+new `ServletListener` class or the class you just created that implementing
+the `ServletContextListener` interface then override the `contextInitialized` method:
+```java
+import bangmaple.jdbc.utils.ConnectionManager;
 
-![](./assets/1.png)
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+import javax.servlet.annotation.WebListener;
+
+@WebListener
+public class ServletListener implements ServletContextListener {
+  @Override
+  public void contextInitialized(ServletContextEvent sce) {
+    ConnectionManager.PROTOCOL = "jdbc:sqlserver";
+    ConnectionManager.HOST = "localhost";
+    ConnectionManager.PORT = 1433;
+    ConnectionManager.USERNAME = "sa";
+    ConnectionManager.PASSWORD = "IloveFPT";
+  }
+} 
+```
+- If you use `META-INF/context.xml` for Database datasource then remember to set the `name` property
+of the `Resource` tag as `JDBCRepository` or the `ConnectionManager` will not initialize 
+- your application, you should configure like this:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Context antiJARLocking="true" path="/">
+    <Resource name="JDBCRepository" auth="Container" type="javax.sql.DataSource"
+              username="sa" password="IloveFPT"
+              driverClassName="com.microsoft.sqlserver.jdbc.SQLServerDriver"
+              url="jdbc:sqlserver://localhost:1433;databaseName=YOUR_DATABASE_NAME"
+              maxActive="8" maxIdle="4"/>
+</Context>
+```
+
 - For non-Servlet environment, navigate to your Main class and configure like this:
 
-![](./assets/2.png)
+```java
+import bangmaple.jdbc.dao.base.Store;
+import bangmaple.jdbc.repository.JdbcRepository;
+import bangmaple.jdbc.utils.ConnectionManager;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    JdbcRepository.DEBUG = true;
+    ConnectionManager.PROTOCOL = "jdbc:sqlserver";
+    ConnectionManager.HOST = "localhost";
+    ConnectionManager.PORT = 1433;
+    ConnectionManager.USERNAME = "sa";
+    ConnectionManager.PASSWORD = "IloveFPT";
+  }
+}
+```
 
 ## ❗️ Appendix:
 - If you want to show the SQL Query while executing the methods, there is
@@ -53,9 +100,30 @@ a `JdbcRepository.DEBUG` variable needed to be set as `true`. Default is `false`
 | ConnectionManager | PASSWORD (String) | The password for logging in to the SQL server. Example: `IloveFPT` |
 
 - In order to use the JDBC Repository, you will need DTO and DAO. Let we configure these:
+```java
 
-![](./assets/3.png)
+import bangmaple.jdbc.annotations.Column;
+import bangmaple.jdbc.annotations.Id;
+import bangmaple.jdbc.annotations.Table;
 
+@Table(name = "users", catalog = "users_management", schema = "dbo")
+public class UsersDTO {
+  @Id
+  @Column(value = "username")
+  private String username;
+
+  @Column(value = "password")
+  private String password;
+
+  @Column(value = "fullname")
+  private String fullname;
+
+  @Column(value = "role")
+  private String role;
+  
+  //Constructor + Getter + Setter + ToString
+} 
+```
 | Annotation  | Can be applied on | Description |
 | ------------- | ------------- | ------------ |
 | `Table`  | Class  | Make a class become an object for communicating with the database corresponding with the current mapping table. `name` for specifying the current mapping table, `catalog` for specifying the current mapping database name.|
@@ -63,9 +131,15 @@ a `JdbcRepository.DEBUG` variable needed to be set as `true`. Default is `false`
 | `Column` | Field | Mark a field to be mapped with the corresponding table's column. Use `value` to specify the value.|
 
 - Now for the DAO class, create a normal class with a private constructor to respect the Singleton pattern.
+```java
+import bangmaple.dto.UsersDTO;
+import bangmaple.jdbc.utils.ConnectionManager;
+import bangmaple.jdbc.dao.base.Store;
 
-![](./assets/4.png)
-
+public class UsersDAO extends Store<UsersDTO, String> {
+  private UsersDAO() {}
+}
+```
 - You may notice our DAO class extends the `Store` class which will responsible for storing the 
 DAO classes only one instance each class by the Thread-safe Singleton pattern.
   + Why you named the class is `Store`:
@@ -82,7 +156,15 @@ DAO classes only one instance each class by the Thread-safe Singleton pattern.
 For that, we have implemented our CRUD, Pagination, Sorting operations for our application.
 
 To retrieve the `UsersDAO` instance, we have to select the instance:
-![](./assets/5.png)
+```java
+import bangmaple.jdbc.dao.base.Store;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    UsersDAO dao = Store.select(UsersDAO.class);
+  }
+}
+```
 
 This is similar to the usual way that we do:
 ```java 
@@ -112,17 +194,49 @@ Now we have all the methods we need, I will list them all by the below table:
 
 - We found that there are two operations `findAll(Pageable)` and `findAll(boolean)`.
   + For the `Pageable` there are many way to use this operation:
-  
+```java
+import bangmaple.jdbc.dao.base.Store;
+import bangmaple.jdbc.paging.PageRequest;
+import bangmaple.jdbc.paging.Pageable;
 
-  ![](./assets/6.png)
+public class Main {
+  public static void main(String[] args) {
+    UsersDAO dao = Store.select(UsersDAO.class);
+    Pageable pageable = PageRequest.of(0, 5, Pageable.SORT_DESC);
+    dao.findAll(pageable);
+  }
+}
+```
   + Respects to the `PageRequest` object, we used the `of` method. For the example, we want to retrieve `5` records by the `first` page then we use `PageRequest.of(0, 5);`.
-  
+```java
+import bangmaple.jdbc.dao.base.Store;
+import bangmaple.jdbc.paging.PageRequest;
+import bangmaple.jdbc.paging.Pageable;
 
-  ![](./assets/7.png)
+public class Main {
+  public static void main(String[] args) {
+    UsersDAO dao = Store.select(UsersDAO.class);
+    Pageagle pageable = PageRequest.of(0, 5, Pageable.SORT_DESC);
+    dao.findAll(pageable);
+  }
+}
+```
   + Now we passed the third parameter - `Pageable.SORT_DESC` this will be described as we want to retrieve `5` records 
 by the `first` page in the `descending` order then we used `PageRequest.of(0, 5, Pageable.SORT_DESC)`. 
   
-![](./assets/8.png)
+```java
+import bangmaple.jdbc.dao.base.Store;
+import bangmaple.jdbc.paging.PageRequest;
+import bangmaple.jdbc.paging.Pageable;
+
+public class Main {
+  public static void main(String[] args) {
+    UsersDAO dao = Store.select(UsersDAO.class);
+    Pageable pageable = PageRequest.of(0, 5, Pageable.SORT_DESC, "fullname", "role");
+    dao.findAll(pageable);
+  }
+}
+```
   + By default `Pagination` operation, the records are ordered by the primary key column (property that is annotated with `@Id`).
   + Now that we passed the final parameter - `String...`. For example, we want to retrieve `5` records
     by the `first` page in the `descending` order based on `fullname` and `role` then we used `PageRequest.of(0, 5, Pageable.SORT_DESC, "fullname", "role")`.
@@ -176,6 +290,26 @@ We may notice there are many variables we don't know, they are described as belo
 ----
 ### Thank your using this library. I made this library for more than 72 hours.
 ### Please don't hesitate to report bug(s) if you found, thanks again in advance!
+
+-------
+### Q&A:
+The application server such as `Apache Tomcat` won't load the library even we already embedded the library into the application:
+```editorconfig
+05-Sep-2021 07:35:06.443 SEVERE [RMI TCP Connection(2)-127.0.0.1] org.apache.catalina.core.StandardContext.listenerStart Exception sending context initialized event to listener instance of class [com.example.demo.ServletListener]
+	java.lang.NoClassDefFoundError: bangmaple/jdbc/utils/ConnectionManager
+		at com.example.demo.ServletListener.contextInitialized(ServletListener.java:13)
+        ...
+	Caused by: java.lang.ClassNotFoundException: bangmaple.jdbc.utils.ConnectionManager
+		at org.apache.catalina.loader.WebappClassLoaderBase.loadClass(WebappClassLoaderBase.java:1365)
+		... 48 more
+```
+- This is how to fix the problem, this is the normal operation of the application. You may have even met this
+if you didn't put the `JDBC Driver library`. Drag the `bangmaple-jdbc-repository.jar` into your `lib` folder 
+of your `Apache Tomcat` directory, for me it is: `/Users/bangmaple/apache-tomcat-9.0.40/lib/`.
+- You may also need to drag the `JDBC Driver library` like `sqljdbc.jar` driver as well.
+
+![](./assets/9.png)
+After that, confirm it is existed at this directory then restart your application server! Happy coding!
 
 ----------------
 ### 💌 Credits
