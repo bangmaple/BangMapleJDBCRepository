@@ -290,7 +290,7 @@ We may notice there are many variables we don't know, they are described as belo
 - For the complete example of the CRUD operations, please navigate to <a href="https://github.com/bangmaple/BangMapleJDBCRepository/blob/master/src/bangmaple/Main.java">this</a> page.
 - For the example of Data Source configuration as `context.xml`, please navigate to <a href="https://github.com/bangmaple/BangMapleJDBCRepository/blob/master/src/META-INF/context.xml">this</a> page.
 ----
-### Thank your using this library. I made this library for more than 72 hours.
+### Thank you for using this library. I made this library for more than 72 hours.
 ### Please don't hesitate to report bug(s) if you found, thanks again in advance!
 
 -------
